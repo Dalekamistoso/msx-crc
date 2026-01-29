@@ -1,4 +1,4 @@
-; CRC.ASM - Utilidad CRC para MSX-DOS
+; CRC.ASM - Utilidad CRC para MSX-DOS con soporte de comodines
 ; Ensamblar con: sjasm crc.asm crc.com
 
 ; Constantes del sistema
@@ -12,6 +12,8 @@ F_CONOUT    EQU     02h         ; Salida de caracter a consola
 F_STROUT    EQU     09h         ; Salida de string (termina en $)
 F_OPEN      EQU     0Fh         ; Abrir archivo
 F_CLOSE     EQU     10h         ; Cerrar archivo
+F_SFIRST    EQU     11h         ; Buscar primer archivo
+F_SNEXT     EQU     12h         ; Buscar siguiente archivo
 F_READ      EQU     14h         ; Leer registro secuencial
 F_WRITE     EQU     15h         ; Escribir registro secuencial
 F_CREATE    EQU     16h         ; Crear archivo
@@ -41,31 +43,150 @@ CHECK_DASH:
         ; Leer comando (c o v)
         LD      A,(HL)
         CP      'c'
-        JP      Z,CMD_CREATE
+        JP      Z,CMD_CREATE_WILD
         CP      'C'
-        JP      Z,CMD_CREATE
+        JP      Z,CMD_CREATE_WILD
         CP      'v'
-        JP      Z,CMD_VERIFY
+        JP      Z,CMD_VERIFY_WILD
         CP      'V'
-        JP      Z,CMD_VERIFY
+        JP      Z,CMD_VERIFY_WILD
         JP      HELP
 
 ; ============================================
-; Comando: Crear archivo CRC
+; Comando: Crear archivo CRC con comodines
 ; ============================================
-CMD_CREATE:
-        ; El nombre del archivo esta en FCB2, no en FCB1
-        ; porque FCB1 contiene "-C" y FCB2 contiene el archivo
+CMD_CREATE_WILD:
+        ; Guardar FCB2 original como patron de busqueda
+        LD      HL,FCB2
+        LD      DE,SEARCHFCB
+        LD      BC,37
+        LDIR
+        
+        ; Verificar si hay patron de busqueda
         LD      A,(FCB2+1)
         CP      ' '
         JP      Z,HELP
         
-        ; Copiar FCB2 a FCB1 para trabajar con el
+        ; Establecer DTA para busqueda
+        LD      DE,SEARCHDTA
+        LD      C,F_SETDTA
+        CALL    BDOS
+        
+        ; Buscar primer archivo
+        LD      DE,SEARCHFCB
+        LD      C,F_SFIRST
+        CALL    BDOS
+        INC     A
+        JP      Z,ERR_NOFILE    ; No se encontraron archivos
+        
+CREATE_LOOP:
+        ; Copiar nombre encontrado de SEARCHDTA a FCB1
+        CALL    COPY_FOUND_TO_FCB1
+        
+        ; Procesar este archivo
+        CALL    PROCESS_CREATE
+        
+        ; Buscar siguiente archivo
+        LD      DE,SEARCHFCB
+        LD      C,F_SNEXT
+        CALL    BDOS
+        INC     A
+        JP      NZ,CREATE_LOOP  ; Si hay mas archivos, continuar
+        
+        ; Terminar
+        RET
+
+; ============================================
+; Comando: Verificar archivo CRC con comodines
+; ============================================
+CMD_VERIFY_WILD:
+        ; Guardar FCB2 original como patron de busqueda
         LD      HL,FCB2
-        LD      DE,FCB1
+        LD      DE,SEARCHFCB
         LD      BC,37
         LDIR
         
+        ; Verificar si hay patron de busqueda
+        LD      A,(FCB2+1)
+        CP      ' '
+        JP      Z,HELP
+        
+        ; Establecer DTA para busqueda
+        LD      DE,SEARCHDTA
+        LD      C,F_SETDTA
+        CALL    BDOS
+        
+        ; Buscar primer archivo
+        LD      DE,SEARCHFCB
+        LD      C,F_SFIRST
+        CALL    BDOS
+        INC     A
+        JP      Z,ERR_NOFILE
+        
+VERIFY_LOOP_WILD:
+        ; Copiar nombre encontrado de SEARCHDTA a FCB1
+        CALL    COPY_FOUND_TO_FCB1
+        
+        ; Procesar este archivo
+        CALL    PROCESS_VERIFY
+        
+        ; Buscar siguiente archivo
+        LD      DE,SEARCHFCB
+        LD      C,F_SNEXT
+        CALL    BDOS
+        INC     A
+        JP      NZ,VERIFY_LOOP_WILD
+        
+        ; Terminar
+        RET
+
+; ============================================
+; Copiar nombre de archivo encontrado a FCB1
+; ============================================
+COPY_FOUND_TO_FCB1:
+        ; El DTA de busqueda tiene el FCB en offset 0
+        ; Copiar drive
+        LD      A,(SEARCHDTA)
+        LD      (FCB1),A
+        
+        ; Copiar nombre (8 bytes)
+        LD      HL,SEARCHDTA+1
+        LD      DE,FCB1+1
+        LD      BC,8
+        LDIR
+        
+        ; Copiar extension (3 bytes)
+        LD      HL,SEARCHDTA+9
+        LD      DE,FCB1+9
+        LD      BC,3
+        LDIR
+        
+        ; Limpiar resto del FCB1
+        XOR     A
+        LD      (FCB1+12),A     ; EX
+        LD      (FCB1+13),A     ; S1
+        LD      (FCB1+14),A     ; S2
+        LD      (FCB1+15),A     ; RC
+        LD      HL,0
+        LD      (FCB1+16),HL    ; D0-D1
+        LD      (FCB1+18),HL    ; D2-D3
+        LD      (FCB1+20),HL    ; D4-D5
+        LD      (FCB1+22),HL    ; D6-D7
+        LD      (FCB1+24),HL    ; D8-D9
+        LD      (FCB1+26),HL    ; D10-D11
+        LD      (FCB1+28),HL    ; D12-D13
+        LD      (FCB1+30),HL    ; D14-D15
+        XOR     A
+        LD      (FCB1+32),A     ; CR
+        LD      (FCB1+33),HL    ; R0-R1
+        LD      (FCB1+35),HL    ; R2-R3
+        
+        RET
+
+; ============================================
+; Procesar un archivo para crear CRC
+; ============================================
+PROCESS_CREATE:
         ; Mostrar mensaje
         LD      DE,MSG_CALC
         LD      C,F_STROUT
@@ -77,12 +198,17 @@ CMD_CREATE:
         LD      C,F_STROUT
         CALL    BDOS
         
+        ; Restaurar DTA normal
+        LD      DE,DTA
+        LD      C,F_SETDTA
+        CALL    BDOS
+        
         ; Abrir archivo para lectura
         LD      DE,FCB1
         LD      C,F_OPEN
         CALL    BDOS
-        INC     A               ; A = 0FFh si hay error
-        JP      Z,ERR_NOFILE
+        INC     A
+        JP      Z,ERR_NOFILE_SKIP
         
         ; Inicializar registro de lectura
         XOR     A
@@ -105,7 +231,7 @@ READ_LOOP:
         LD      DE,FCB1
         LD      C,F_READ
         CALL    BDOS
-        OR      A               ; A = 0 si OK, 1 si EOF
+        OR      A
         JP      NZ,READ_DONE
         
         ; Calcular CRC del bloque leido
@@ -136,25 +262,18 @@ READ_DONE:
         ; Crear archivo .CRC
         CALL    CREATE_CRC_FILE
         
-        ; Terminar
+        ; Restaurar DTA de busqueda
+        LD      DE,SEARCHDTA
+        LD      C,F_SETDTA
+        CALL    BDOS
+        
         RET
 
 ; ============================================
-; Comando: Verificar archivo CRC
+; Procesar un archivo para verificar CRC
 ; ============================================
-CMD_VERIFY:
-        ; El nombre del archivo esta en FCB2
-        LD      A,(FCB2+1)
-        CP      ' '
-        JP      Z,HELP
-        
-        ; Copiar FCB2 a FCB1 para trabajar con el
-        LD      HL,FCB2
-        LD      DE,FCB1
-        LD      BC,37
-        LDIR
-        
-        ; Guardar FCB1 original en SAVEFCB
+PROCESS_VERIFY:
+        ; Guardar FCB1 en SAVEFCB
         LD      HL,FCB1
         LD      DE,SAVEFCB
         LD      BC,37
@@ -170,9 +289,14 @@ CMD_VERIFY:
         LD      C,F_STROUT
         CALL    BDOS
         
+        ; Restaurar DTA normal
+        LD      DE,DTA
+        LD      C,F_SETDTA
+        CALL    BDOS
+        
         ; Primero leer el archivo .CRC
         CALL    READ_CRC_FILE
-        JP      C,ERR_NOCRC
+        JP      C,ERR_NOCRC_SKIP
         
         ; Guardar CRC leido
         LD      HL,(CRC_FROM_FILE)
@@ -191,12 +315,12 @@ CMD_VERIFY:
         LD      (FCB1+15),A     ; S2 = 0
         LD      (FCB1+32),A     ; CR = 0
         
-        ; Ahora abrir el archivo original
+        ; Abrir el archivo original
         LD      DE,FCB1
         LD      C,F_OPEN
         CALL    BDOS
         INC     A
-        JP      Z,ERR_NOFILE
+        JP      Z,ERR_NOFILE_SKIP
         
         ; Calcular CRC del archivo
         LD      HL,0FFFFh
@@ -258,12 +382,19 @@ VERIFY_DONE:
         LD      DE,MSG_BAD
         LD      C,F_STROUT
         CALL    BDOS
-        RET
+        JP      VERIFY_RESTORE_DTA
 
 VERIFY_OK:
         LD      DE,MSG_OK
         LD      C,F_STROUT
         CALL    BDOS
+
+VERIFY_RESTORE_DTA:
+        ; Restaurar DTA de busqueda
+        LD      DE,SEARCHDTA
+        LD      C,F_SETDTA
+        CALL    BDOS
+        
         RET
 
 ; ============================================
@@ -451,7 +582,7 @@ CREATE_CRC_FILE:
         LD      C,F_CREATE
         CALL    BDOS
         INC     A
-        JP      Z,ERR_CREATE
+        JP      Z,ERR_CREATE_SKIP
         
         ; Inicializar registro
         XOR     A
@@ -694,14 +825,28 @@ ERR_NOFILE:
         CALL    BDOS
         RET
 
-ERR_NOCRC:
-        LD      DE,MSG_ERRCRC
+ERR_NOFILE_SKIP:
+        LD      DE,MSG_ERRFILE_SKIP
         LD      C,F_STROUT
+        CALL    BDOS
+        ; Restaurar DTA de busqueda antes de continuar
+        LD      DE,SEARCHDTA
+        LD      C,F_SETDTA
         CALL    BDOS
         RET
 
-ERR_CREATE:
-        LD      DE,MSG_ERRCREATE
+ERR_NOCRC_SKIP:
+        LD      DE,MSG_ERRCRC_SKIP
+        LD      C,F_STROUT
+        CALL    BDOS
+        ; Restaurar DTA de busqueda antes de continuar
+        LD      DE,SEARCHDTA
+        LD      C,F_SETDTA
+        CALL    BDOS
+        RET
+
+ERR_CREATE_SKIP:
+        LD      DE,MSG_ERRCREATE_SKIP
         LD      C,F_STROUT
         CALL    BDOS
         RET
@@ -710,15 +855,21 @@ ERR_CREATE:
 ; Mensajes
 ; ============================================
 MSG_HELP:
-        DB      'CRC v1.1 - Utilidad CRC para MSX-DOS',13,10
-        DB      13,10
+        DB      'MSX-CRC v2.0 - Verificador CRC para MSX-DOS',13,10
+        DB      'Creado por DrWh0/Dalekmistoso',13,10
+		DB      'Web: https://github.com/Dalekamistoso/msx-crc',13,10
+                DB      13,10
         DB      'Uso:',13,10
-        DB      '  CRC -c <archivo>  Crear archivo .CRC',13,10
-        DB      '  CRC -v <archivo>  Verificar archivo',13,10
+        DB      '  CRC -c <archivo>   Crear archivo .CRC',13,10
+        DB      '  CRC -v <archivo>   Verificar archivo',13,10
+        DB      13,10
+        DB      'Soporta comodines (* y ?)',13,10
         DB      13,10
         DB      'Ejemplos:',13,10
         DB      '  CRC -c GAME.ROM',13,10
         DB      '  CRC -v GAME.ROM',13,10
+        DB      '  CRC -c *.ROM',13,10
+        DB      '  CRC -v *.BIN',13,10
         DB      '$'
 
 MSG_CALC:
@@ -746,13 +897,16 @@ MSG_SAVED_IN:
         DB      'Guardado en archivo .CRC',13,10,'$'
 
 MSG_ERRFILE:
-        DB      'Error: No se puede abrir el archivo',13,10,'$'
+        DB      'Error: No se encontraron archivos',13,10,'$'
 
-MSG_ERRCRC:
-        DB      'Error: No se encuentra archivo .CRC',13,10,'$'
+MSG_ERRFILE_SKIP:
+        DB      '  Error: No se puede abrir',13,10,'$'
 
-MSG_ERRCREATE:
-        DB      'Error: No se puede crear archivo .CRC',13,10,'$'
+MSG_ERRCRC_SKIP:
+        DB      '  Error: No se encuentra archivo .CRC',13,10,'$'
+
+MSG_ERRCREATE_SKIP:
+        DB      '  Error: No se puede crear archivo .CRC',13,10,'$'
 
 MSG_CRLF:
         DB      13,10,'$'
@@ -777,6 +931,12 @@ CRCFCB:
 
 SAVEFCB:
         DS      37              ; FCB guardado para restaurar
+
+SEARCHFCB:
+        DS      37              ; FCB para busqueda con comodines
+
+SEARCHDTA:
+        DS      128             ; DTA para busqueda de archivos
 
 BUFFER:
         DS      128             ; Buffer de lectura
