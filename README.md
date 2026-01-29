@@ -126,8 +126,6 @@ Useful for verifying the integrity of files, ROMs, backups, etc.
 
 ## Features
 
-## Features
-
 - Calculates CRC-16 for any file
 - Creates .CRC files with checksum data
 - Compares files against their saved checksums (verify)
