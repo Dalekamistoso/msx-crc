@@ -17,9 +17,9 @@ de CRC (Cyclic Redundancy Check).
 - Optimizado para MSX (Z80)
 - Tamaño pequeño y rápido
 
-## Compilación
+## Instrucciones de compilación
 
-### Con SJASM 0.42c:
+### SJASM 0.42c (la versión con la que creé este programa):
 
 * Ve a https://www.xl2s.tk/
 
@@ -28,14 +28,14 @@ de CRC (Cyclic Redundancy Check).
 * Copia los archivos de este proyecto en una carpeta vacía.
 
 * Descomprime el contenido del zip del compilador junto a este .asm
-  (El make.bat busca archivo "sjasm.exe" en la ruta actual)
+  (El make.bat busca archivo "sjasm.exe" en la misma ruta de crc.asm)
 
-* Ejecuta make.bat adjunto para compilarlo o escribe manualmente:
+* Ejecuta "make.bat" adjunto para compilarlo o bien manualmente:
 
   sjasm.exe -s crc-sjasm.asm crc.com
 
 
-## Manual de uso de la aplicación
+## Manual de uso
 
 * Nota: Si ejecutas "crc" sin parámetros mostrará un resumen de uso
 
@@ -49,26 +49,27 @@ Esto creará un `ARCHIVO.CRC` con el checksum del archivo `ARCHIVO.EXT`.
 ```
 CRC -v ARCHIVO.EXT 
 ```
-Esto buscará y comparará el archivo original `ARCHIVO.CRC` con la 
-información almacenada en `ARCHIVO.CRC`
+Esto buscará y comparará el archivo original `ARCHIVO.EXT` con la 
+información almacenada en el archivo `ARCHIVO.CRC` del mismo directorio
 
-## Ejemplos:
+## Ejemplo:
 
 ```
-A> CRC -c GAME.ROM
-Calculando CRC de 'GAME.ROM'...
-CRC: A5F3 guardado en 'GAME.ROM.crc'
+A> CRC -c MIF.EXE
+Calculando CRC de 'MIF.EXE'
+CRC: 7233
+Guardado en archivo .CRC (Esto creará 'MIF.CRC'
 
-A> CRC -v GAME.ROM
-Verificando 'GAME.ROM'...
-CRC calculado: A5F3
-CRC guardado:  A5F3
-OK - El archivo es correcto
+A> CRC -v  MIF.EXE
+Verificando ' MIF.EXE'...
+CRC calculado: 7233
+CRC guardado:  7233
+OK - archivo correcto
 ```
 
 ## Formato del archivo de CRC:
 
-Actualmente implemento CRC16, está previsto añadir CRC32
+Actualmente implemento CRC16, está previsto añadir CRC32 opcional
 
 ## Notas técnicas:
 
@@ -89,9 +90,9 @@ Actualmente implemento CRC16, está previsto añadir CRC32
 - 0: Éxito (verificación correcta)
 - 1: Error (archivo corrupto, no encontrado, etc.)
 
-## Limitaciones actuales (versión 2.1):
+## Limitaciones actuales (versión 2.0):
 
-- No soporta subdirectorios
+- No soporta subdirectorios (MSX-DOS1)
 - No hay soporte de CRC32
 
 ## Autor:
@@ -103,4 +104,4 @@ Más proyectos en:
 https://x.com/Dalekamistoso
 https://github.com/Dalekamistoso
 
-Versión 2.1 (29/01/2026)
+Versión 2.0 (29/01/2026) - Primera versión publicada

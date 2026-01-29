@@ -1,4 +1,4 @@
-sjasm\sjasm.exe crc-sjasm.asm crc.com > log.txt
+sjasm.exe crc.asm crc.com > log.txt
 
 type log.txt
 
