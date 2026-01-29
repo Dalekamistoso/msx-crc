@@ -24,9 +24,7 @@ Descomprime el contenido zip en una subcarpeta llamada "sjasm".
 
 Usa el archivo make.bat adjunto para ejecutarlo o escribe manualmente:
 
-sjasm.exe -s crc-sjasm.asm
-
-Tendrás un archivo .out; renómbralo a .com y ¡listo!
+sjasm.exe -s crc-sjasm.asm crc.com
 
 
 ## Uso
