@@ -1,14 +1,14 @@
-# CRC.COM - Utilidad CRC para MSX-DOS por Dalekamistoso/DrWh0
+# CRC.COM - Utilidad CRC para MSX-DOS (29/01/2026)
 
 
-## Descripción:
+## Descripción
 
 Programa para MSX-DOS que crea y verifica archivos empleando ficheros
 de CRC (Cyclic Redundancy Check).
 
 Útil para verificar la integridad de archivos, ROMs, backups, etc.
 
-## Características:
+## Características
 
 - Calcula CRC-16 de cualquier archivo
 - Crea archivos .CRC con el checksum
@@ -89,14 +89,14 @@ Actualmente implemento CRC16, está previsto añadir CRC32
 - 0: Éxito (verificación correcta)
 - 1: Error (archivo corrupto, no encontrado, etc.)
 
-## Limitaciones
+## Limitaciones actuales (versión 2.1):
 
-- Nombres de archivo limitados a 79 caracteres
-- De momento no hay soporte de CRC32
+- No soporta subdirectorios
+- No hay soporte de CRC32
 
-## Autor
+## Autor:
 
-Creado por DrWh0
+Creado por Dalekamistoso/DrWh0
 
 Más proyectos en: 
 
