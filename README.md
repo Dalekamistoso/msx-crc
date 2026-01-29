@@ -1,4 +1,4 @@
-# CRC.COM (Nombre provisional) - Utilidad CRC para MSX-DOS
+# CRC (Nombre provisional) - Utilidad CRC para MSX-DOS
 
 ## Descripción
 Programa para MSX-DOS que crea y verifica archivos CRC (Cyclic Redundancy Check).
