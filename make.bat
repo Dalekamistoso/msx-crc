@@ -1,9 +1,4 @@
-del crc-sjasm.com
-del *.out
-del log.txt
-
-sjasm\sjasm.exe -s crc-sjasm.asm > log.txt
-copy crc-sjasm.out crc-sjasm.com
+sjasm\sjasm.exe crc-sjasm.asm crc.com > log.txt
 
 type log.txt
 
