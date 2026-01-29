@@ -708,7 +708,7 @@ ERR_CREATE:
 ; Mensajes
 ; ============================================
 MSG_HELP:
-        DB      'CRC v1.0 - Utilidad CRC para MSX-DOS',13,10
+        DB      'CRC v1.1 - Utilidad CRC para MSX-DOS',13,10
         DB      13,10
         DB      'Uso:',13,10
         DB      '  CRC -c <archivo>  Crear archivo .CRC',13,10
