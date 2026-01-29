@@ -651,6 +651,7 @@ PARSE_HEX:
 
 IS_DIGIT:
         ; DE = DE * 16 + A
+        PUSH    BC              ; Guardar B (contador)
         PUSH    HL
         LD      H,D
         LD      L,E
@@ -668,6 +669,7 @@ IS_DIGIT:
         ADD     HL,BC
         EX      DE,HL
         
+        POP     BC              ; Restaurar B (contador)
         INC     HL
         DJNZ    PARSE_HEX
         
