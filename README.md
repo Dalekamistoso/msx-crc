@@ -1,6 +1,6 @@
 # CRC.COM - Utilidad CRC para MSX-DOS (29/01/2026)
 
-__<u>(English manual below the spanish text)</u>_
+_<u>(English manual below the spanish text)</u>_
 
 ## Descripción
 
