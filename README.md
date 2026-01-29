@@ -1,47 +1,58 @@
-# CRC (Nombre provisional) - Utilidad CRC para MSX-DOS
+# CRC.COM - Utilidad CRC para MSX-DOS por Dalekamistoso/DrWh0
 
-## Descripción
-Programa para MSX-DOS que crea y verifica archivos CRC (Cyclic Redundancy Check).
+
+## Descripción:
+
+Programa para MSX-DOS que crea y verifica archivos empleando ficheros
+de CRC (Cyclic Redundancy Check).
+
 Útil para verificar la integridad de archivos, ROMs, backups, etc.
 
-## Características
+## Características:
+
 - Calcula CRC-16 de cualquier archivo
 - Crea archivos .CRC con el checksum
 - Verifica archivos contra sus checksums guardados
+- Soporta comodines (crea un .crc por cada archivo)
 - Optimizado para MSX (Z80)
 - Tamaño pequeño y rápido
 
 ## Compilación
 
-### Con SJASM 0.42c
-Ve a https://www.xl2s.tk/
+### Con SJASM 0.42c:
 
-Ve al apartado Sjasm -> Descargar SJASM 0.42c
+* Ve a https://www.xl2s.tk/
 
-Copia los archivos de este proyecto en una carpeta vacía.
+* Descargar SJASM 0.42c (sjasm42c.zip)
 
-Descomprime el contenido zip en una subcarpeta llamada "sjasm".
+* Copia los archivos de este proyecto en una carpeta vacía.
 
-Usa el archivo make.bat adjunto para ejecutarlo o escribe manualmente:
+* Descomprime el contenido del zip del compilador junto a este .asm
+  (El make.bat busca archivo "sjasm.exe" en la ruta actual)
 
-sjasm.exe -s crc-sjasm.asm crc.com
+* Ejecuta make.bat adjunto para compilarlo o escribe manualmente:
+
+  sjasm.exe -s crc-sjasm.asm crc.com
 
 
-## Uso
+## Manual de uso de la aplicación
+
+* Nota: Si ejecutas "crc" sin parámetros mostrará un resumen de uso
 
 ### Crear archivo CRC:
 ```
 CRC -c ARCHIVO.EXT
 ```
-Esto creará `ARCHIVO.EXT.crc` con el checksum.
+Esto creará un `ARCHIVO.CRC` con el checksum del archivo `ARCHIVO.EXT`.
 
 ### Verificar archivo:
 ```
 CRC -v ARCHIVO.EXT 
 ```
-Esto comparará el archivo con `ARCHIVO.EXT.crc`
+Esto buscará y comparará el archivo original `ARCHIVO.CRC` con la 
+información almacenada en `ARCHIVO.CRC`
 
-## Ejemplos
+## Ejemplos:
 
 ```
 A> CRC -c GAME.ROM
@@ -55,29 +66,21 @@ CRC guardado:  A5F3
 OK - El archivo es correcto
 ```
 
-## Formato del archivo .CRC
+## Formato del archivo de CRC:
 
-El archivo .CRC contiene una línea con:
-```
-<CRC_HEX> <NOMBRE_ARCHIVO>
-```
+Actualmente implemento CRC16, está previsto añadir CRC32
 
-Ejemplo:
-```
-A5F3 GAME.ROM
-```
-
-## Notas técnicas
+## Notas técnicas:
 
 - Algoritmo: CRC-16 con polinomio 0x8005
 - Valor inicial: 0xFFFF
 - Tamaño de buffer: 128 bytes (optimizado para MSX)
 - Compatible con MSX-DOS 1 y MSX-DOS 2
 
-## Casos de uso
+## Indicado para:
 
-1. **Verificar ROMs**: Asegúrate de que tus ROMs no estén corruptas
-2. **Backups**: Verifica que las copias sean idénticas
+1. **Verificar archivos**: Asegúrate que tus archivos no estén corruptos
+2. **Backups**: Verifica que las copias sean idénticas y correctas
 3. **Transferencias**: Comprueba que los archivos se transfirieron correctamente
 4. **Archivos de disco**: Detecta sectores dañados o errores de lectura
 
@@ -88,9 +91,8 @@ A5F3 GAME.ROM
 
 ## Limitaciones
 
-- No soporta wildcards (*.*, etc.)
 - Nombres de archivo limitados a 79 caracteres
-- Un archivo a la vez
+- De momento no hay soporte de CRC32
 
 ## Autor
 
@@ -101,4 +103,4 @@ Más proyectos en:
 https://x.com/Dalekamistoso
 https://github.com/Dalekamistoso
 
-Versión 1.0
+Versión 2.1 (29/01/2026)
