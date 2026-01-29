@@ -33,7 +33,7 @@ de CRC (Cyclic Redundancy Check).
 
 * Ejecuta "make.bat" adjunto para compilarlo o bien manualmente:
 
-  sjasm.exe -s crc-sjasm.asm crc.com
+  sjasm.exe -s crc.asm crc.com
 
 
 ## Manual de uso
@@ -143,11 +143,11 @@ Useful for verifying the integrity of files, ROMs, backups, etc.
 * Copy the files from this project into an empty folder.
 
 * Unzip the contents of the compiler zip file next to this .asm file.
-  (The 'make.bat' file looks for the ‘sjasm.exe’ file in the same path as crc.asm)
+  (The 'make-eng.bat' file looks for the ‘sjasm.exe’ file in the same path as crc-eng.asm)
 
-* Run the attached ‘make.bat’ file to compile it, or do it manually typing:
+* Run the attached ‘make-eng.bat’ file to compile it, or do it manually typing:
 
-  sjasm.exe -s crc-sjasm.asm crc.com
+  sjasm.exe -s crc-eng.asm crc-eng.com
 
 
 ## User manual
