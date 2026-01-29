@@ -3,12 +3,12 @@
 
 ; Constantes del sistema
 BDOS        EQU     0005h       ; Entrada a BDOS
-FCB1        EQU     005Ch       ; FCB del primer parámetro
-FCB2        EQU     006Ch       ; FCB del segundo parámetro  
+FCB1        EQU     005Ch       ; FCB del primer parametro
+FCB2        EQU     006Ch       ; FCB del segundo parametro  
 DTA         EQU     0080h       ; Disk Transfer Area
 
 ; Funciones BDOS
-F_CONOUT    EQU     02h         ; Salida de carácter a consola
+F_CONOUT    EQU     02h         ; Salida de caracter a consola
 F_STROUT    EQU     09h         ; Salida de string (termina en $)
 F_OPEN      EQU     0Fh         ; Abrir archivo
 F_CLOSE     EQU     10h         ; Cerrar archivo
@@ -54,13 +54,13 @@ CHECK_DASH:
 ; Comando: Crear archivo CRC
 ; ============================================
 CMD_CREATE:
-        ; El nombre del archivo está en FCB2, no en FCB1
+        ; El nombre del archivo esta en FCB2, no en FCB1
         ; porque FCB1 contiene "-C" y FCB2 contiene el archivo
         LD      A,(FCB2+1)
         CP      ' '
         JP      Z,HELP
         
-        ; Copiar FCB2 a FCB1 para trabajar con él
+        ; Copiar FCB2 a FCB1 para trabajar con el
         LD      HL,FCB2
         LD      DE,FCB1
         LD      BC,37
@@ -86,7 +86,10 @@ CMD_CREATE:
         
         ; Inicializar registro de lectura
         XOR     A
-        LD      (FCB1+32),A     ; Current record = 0
+        LD      (FCB1+12),A     ; EX = 0
+        LD      (FCB1+14),A     ; S1 = 0
+        LD      (FCB1+15),A     ; S2 = 0
+        LD      (FCB1+32),A     ; CR = 0
         
         ; Inicializar CRC a 0FFFFh
         LD      HL,0FFFFh
@@ -105,7 +108,7 @@ READ_LOOP:
         OR      A               ; A = 0 si OK, 1 si EOF
         JP      NZ,READ_DONE
         
-        ; Calcular CRC del bloque leído
+        ; Calcular CRC del bloque leido
         LD      HL,BUFFER
         LD      BC,128
         CALL    UPDATE_CRC
@@ -140,12 +143,12 @@ READ_DONE:
 ; Comando: Verificar archivo CRC
 ; ============================================
 CMD_VERIFY:
-        ; El nombre del archivo está en FCB2
+        ; El nombre del archivo esta en FCB2
         LD      A,(FCB2+1)
         CP      ' '
         JP      Z,HELP
         
-        ; Copiar FCB2 a FCB1 para trabajar con él
+        ; Copiar FCB2 a FCB1 para trabajar con el
         LD      HL,FCB2
         LD      DE,FCB1
         LD      BC,37
@@ -171,7 +174,8 @@ CMD_VERIFY:
         CALL    READ_CRC_FILE
         JP      C,ERR_NOCRC
         
-        ; Guardar CRC leído
+        ; Guardar CRC leido
+        LD      HL,(CRC_FROM_FILE)
         LD      (SAVED_CRC),HL
         
         ; Restaurar FCB1 original
@@ -265,52 +269,65 @@ VERIFY_OK:
 ; ============================================
 ; Calcular CRC-16 de un bloque
 ; Entrada: HL = puntero al buffer
-;          BC = tamaño del buffer
+;          BC = tamano del buffer
 ; ============================================
 UPDATE_CRC:
+        ; Guardar el contador de bytes
         PUSH    BC
-        LD      BC,(CRC_VAL)
+        
+        ; Cargar el CRC actual en DE
+        LD      DE,(CRC_VAL)
 
 CRC_LOOP:
-        LD      A,(HL)          ; Leer byte
-        XOR     B               ; XOR con parte alta del CRC
-        LD      B,A
+        ; Obtener byte del buffer
+        LD      A,(HL)
         
-        LD      D,8             ; 8 bits por byte
+        ; XOR con parte alta del CRC
+        XOR     D
+        LD      D,A
+        
+        ; Procesar 8 bits
+        PUSH    BC
+        LD      B,8
 
 BIT_LOOP:
-        SLA     C               ; Shift left del CRC
-        RL      B
-        JP      NC,NO_XOR       ; Si no hay carry, no hacer XOR
+        ; Shift left del CRC (DE)
+        SLA     E
+        RL      D
+        JP      NC,NO_XOR
         
         ; XOR con polinomio 0x8005
-        LD      A,C
+        LD      A,E
         XOR     05h
-        LD      C,A
-        LD      A,B
+        LD      E,A
+        LD      A,D
         XOR     80h
-        LD      B,A
+        LD      D,A
 
 NO_XOR:
-        DEC     D
-        JP      NZ,BIT_LOOP
+        DJNZ    BIT_LOOP
         
-        INC     HL              ; Siguiente byte
-        POP     DE
-        DEC     DE
-        PUSH    DE
-        LD      A,D
-        OR      E
+        POP     BC
+        
+        ; Siguiente byte
+        INC     HL
+        DEC     BC
+        
+        ; Verificar si quedan bytes
+        LD      A,B
+        OR      C
         JP      NZ,CRC_LOOP
         
         ; Guardar resultado
-        LD      (CRC_VAL),BC
+        LD      (CRC_VAL),DE
+        
+        ; Restaurar BC original
         POP     BC
         RET
 
 ; ============================================
-; Imprimir número hexadecimal de 16 bits
-; Entrada: HL = número a imprimir
+; Imprimir numero hexadecimal de 16 bits
+; Entrada: HL = numero a imprimir
 ; ============================================
 PRINT_HEX16:
         LD      A,H
@@ -351,59 +368,78 @@ PRINT_CHAR:
 PRINT_FCB_NAME:
         LD      HL,FCB1+1
         LD      B,8
+        PUSH    BC
+        PUSH    HL
 
-PRINT_NAME:
+PRINT_NAME_LOOP:
         LD      A,(HL)
         CP      ' '
         JP      Z,PRINT_EXT
         LD      E,A
         LD      C,F_CONOUT
-        PUSH    HL
         PUSH    BC
+        PUSH    HL
         CALL    BDOS
-        POP     BC
         POP     HL
+        POP     BC
         INC     HL
-        DJNZ    PRINT_NAME
+        DJNZ    PRINT_NAME_LOOP
 
 PRINT_EXT:
         LD      E,'.'
         LD      C,F_CONOUT
+        PUSH    BC
         CALL    BDOS
+        POP     BC
         
+        POP     HL
+        POP     BC
         LD      HL,FCB1+9
         LD      B,3
+        PUSH    BC
+        PUSH    HL
 
 PRINT_EXT_LOOP:
         LD      A,(HL)
         CP      ' '
-        RET     Z
+        JP      Z,END_PRINT_NAME
         LD      E,A
         LD      C,F_CONOUT
-        PUSH    HL
         PUSH    BC
+        PUSH    HL
         CALL    BDOS
-        POP     BC
         POP     HL
+        POP     BC
         INC     HL
         DJNZ    PRINT_EXT_LOOP
+
+END_PRINT_NAME:
+        POP     HL
+        POP     BC
         RET
 
 ; ============================================
 ; Crear archivo .CRC con el CRC calculado
 ; ============================================
 CREATE_CRC_FILE:
-        ; Copiar FCB1 a CRCFCB y cambiar extensión
+        ; Copiar FCB1 a CRCFCB y cambiar extension
         LD      HL,FCB1
         LD      DE,CRCFCB
         LD      BC,16
         LDIR
         
-        ; Cambiar extensión a .CRC
+        ; Cambiar extension a .CRC
         LD      HL,EXT_CRC
         LD      DE,CRCFCB+9
         LD      BC,3
         LDIR
+        
+        ; Resetear campos del FCB
+        XOR     A
+        LD      (CRCFCB+12),A   ; EX = 0
+        LD      (CRCFCB+14),A   ; S1 = 0
+        LD      (CRCFCB+15),A   ; S2 = 0
+        LD      (CRCFCB+32),A   ; CR = 0
         
         ; Borrar archivo si existe
         LD      DE,CRCFCB
@@ -534,20 +570,27 @@ STORE_CHAR:
 
 ; ============================================
 ; Leer CRC del archivo .CRC
-; Salida: HL = CRC leído, Carry = error
+; Salida: HL = CRC leido, Carry = error
 ; ============================================
 READ_CRC_FILE:
-        ; Copiar FCB1 a CRCFCB y cambiar extensión
+        ; Copiar FCB1 a CRCFCB y cambiar extension
         LD      HL,FCB1
         LD      DE,CRCFCB
         LD      BC,16
         LDIR
         
-        ; Cambiar extensión a .CRC
+        ; Cambiar extension a .CRC
         LD      HL,EXT_CRC
         LD      DE,CRCFCB+9
         LD      BC,3
         LDIR
+        
+        ; Resetear campos del FCB
+        XOR     A
+        LD      (CRCFCB+12),A   ; EX = 0
+        LD      (CRCFCB+14),A   ; S1 = 0
+        LD      (CRCFCB+15),A   ; S2 = 0
+        LD      (CRCFCB+32),A   ; CR = 0
         
         ; Abrir archivo .CRC
         LD      DE,CRCFCB
@@ -580,6 +623,9 @@ READ_CRC_FILE:
         LD      HL,BUFFER
         CALL    TEXT_TO_HEX
         
+        ; Guardar en variable temporal
+        LD      (CRC_FROM_FILE),HL
+        
         OR      A               ; Clear carry = OK
         RET
 
@@ -588,9 +634,9 @@ CRC_ERR:
         RET
 
 ; ============================================
-; Convertir 4 caracteres HEX a número
+; Convertir 4 caracteres HEX a numero
 ; Entrada: HL = puntero al texto
-; Salida: HL = número
+; Salida: HL = numero
 ; ============================================
 TEXT_TO_HEX:
         LD      DE,0
@@ -719,6 +765,9 @@ CRC_VAL:
         DW      0FFFFh
 
 SAVED_CRC:
+        DW      0
+
+CRC_FROM_FILE:
         DW      0
 
 CRCFCB:
