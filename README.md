@@ -1,6 +1,6 @@
-# CRC.COM - Utilidad CRC para MSX-DOS (29/01/2026)
+# CRC.COM - Utilidad CRC para MSX-DOS
 
-<img width="1280" height="960" alt="crc-esp" src="https://github.com/user-attachments/assets/bbbd3cea-4d95-4dfb-839e-a668e9c23f73" />
+<img width="1280" height="960" alt="crc-esp" src="https://github.com/user-attachments/assets/64f0698b-bbad-4be2-bc4a-33c48974e403" />
 
 _<u>(English manual & screenshot below the spanish text)</u>_
 
