@@ -1,6 +1,6 @@
 # CRC.COM - Utilidad CRC para MSX-DOS
 
-<img width="1280" height="960" alt="crc-esp" src="https://github.com/user-attachments/assets/64f0698b-bbad-4be2-bc4a-33c48974e403" />
+<img width="1280" height="960" alt="crc-eng" src="https://github.com/user-attachments/assets/45734da8-dda3-41c6-ab0b-8f6025da5d5a" />
 
 _<u>(English manual & screenshot below the spanish text)</u>_
 
