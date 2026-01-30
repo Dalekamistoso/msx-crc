@@ -1158,14 +1158,14 @@ ERR_CREATE_SKIP:
 ; Mensajes
 ; ============================================
 MSG_HELP:
-        DB      'CRC v3.0 - CRC Checker for MSX-DOS',13,10
-        DB      'Programmed by DrWh0/Dalekmistoso',13,10
+        DB      'CRC v3.0 - Verificador de CRC para MSX-DOS',13,10
+        DB      'Programado por DrWh0/Dalekmistoso',13,10
 	DB      'Web: https://github.com/Dalekamistoso/msx-crc',13,10
         DB      13,10
-        DB      'Usage:',13,10
-        DB      '  CRC -c <file>    Create .CRC file (CRC16)',13,10
-        DB      '  CRC -c2 <file>   Create .CRC file (CRC32)',13,10
-        DB      '  CRC -v <file>    Verify file (auto-detect)',13,10
+        DB      'Uso:',13,10
+        DB      '  CRC -c <file>    Crea archivo .CRC (CRC16)',13,10
+        DB      '  CRC -c2 <file>   Crea archivo .CRC (CRC32)',13,10
+        DB      '  CRC -v <file>    Verificar archivo (auto-detectar)',13,10
         DB      13,10
         DB      'Wildcards supported (* and ?)',13,10
         DB      13,10
@@ -1179,40 +1179,40 @@ MSG_HELP:
         DB      '$'
 
 MSG_CALC:
-        DB      'Calculating CRC of: $'
+        DB      'Calculando CRC de: $'
 
 MSG_VERIFY:
-        DB      'Verifying: $'
+        DB      'Verificando: $'
 
 MSG_CRC:
         DB      'CRC: $'
 
 MSG_CALC2:
-        DB      'CRC calculated: $'
+        DB      'CRC calculado: $'
 
 MSG_SAVED:
-        DB      'CRC saved:      $'
+        DB      'CRC guardado:      $'
 
 MSG_OK:
-        DB      'OK - Correct file',13,10,'$'
+        DB      'OK - Archivo correcto',13,10,'$'
 
 MSG_BAD:
-        DB      'ERROR - Corrupted file',13,10,'$'
+        DB      'ERROR - Archivo corrupto',13,10,'$'
 
 MSG_SAVED_IN:
-        DB      'Saved in .CRC file',13,10,'$'
+        DB      'Guardado en archivo .CRC',13,10,'$'
 
 MSG_ERRFILE:
-        DB      'Error: File(s) not found',13,10,'$'
+        DB      'Error: Archivo(s) no encontrado(s)',13,10,'$'
 
 MSG_ERRFILE_SKIP:
-        DB      '  Error: Cannot open',13,10,'$'
+        DB      '  Error: No se pudo abrir',13,10,'$'
 
 MSG_ERRCRC_SKIP:
-        DB      '  Error: .CRC File not found',13,10,'$'
+        DB      '  Error: Archivo .CRC no encontrado',13,10,'$'
 
 MSG_ERRCREATE_SKIP:
-        DB      '  Error: Cannot create .CRC File',13,10,'$'
+        DB      '  Error: No se pudo crear archivo .CRC',13,10,'$'
 
 MSG_CRLF:
         DB      13,10,'$'

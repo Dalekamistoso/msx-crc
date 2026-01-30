@@ -13,7 +13,7 @@ de CRC (Cyclic Redundancy Check).
 
 ## Características
 
-- Calcula CRC-16 de cualquier archivo
+- Calcula CRC-16 y CRC-32 de cualquier archivo
 - Crea archivos .CRC con el checksum
 - Verifica archivos contra sus checksums guardados
 - Soporta comodines (crea un .crc por cada archivo)
@@ -45,6 +45,7 @@ de CRC (Cyclic Redundancy Check).
 ### Crear archivo CRC:
 ```
 CRC -c ARCHIVO.EXT
+CRC -c2 ARCHIVO.EXT (para CRC32)
 ```
 Esto creará un `ARCHIVO.CRC` con el checksum del archivo `ARCHIVO.EXT`.
 
@@ -72,14 +73,17 @@ OK - archivo correcto
 
 ## Formato del archivo de CRC:
 
-Actualmente implemento CRC16, está previsto añadir CRC32 opcional
+Actualmente implementados CRC16 y CRC32
 
 ## Notas técnicas:
 
 - Algoritmo: CRC-16 con polinomio 0x8005
-- Valor inicial: 0xFFFF
+- Algoritmo: CRC-32 con polinomio 0xEDB88320 (IEEE 802.3)
+- Valor inicial: 0xFFFF (CRC16) / 0xFFFFFFFF (CRC32)
 - Tamaño de buffer: 128 bytes (optimizado para MSX)
 - Compatible con MSX-DOS 1 y MSX-DOS 2
+- Procesamiento: Bit a bit, LSB primero
+
 
 ## Indicado para:
 
@@ -107,7 +111,15 @@ Más proyectos en:
 https://x.com/Dalekamistoso
 https://github.com/Dalekamistoso
 
-Versión 2.0 (29/01/2026) - Primera versión pública
+## Changelog:
+
+Version 3.0 (30/01/2026)
+ - Added support for CRC32 (use -c2 parameter)
+ - Updated readme file & screenshots
+ - New make files to compile binaries by language
+ 
+Version 2.0 (29/01/2026)
+ - Primera versión pública
 
 
 ----------------------------------------------------
@@ -126,7 +138,7 @@ Useful for verifying the integrity of files, ROMs, backups, etc.
 
 ## Features
 
-- Calculates CRC-16 for any file
+- Calculates CRC-16 & CRC-32 for any file
 - Creates .CRC files with checksum data
 - Compares files against their saved checksums (verify)
 - Supports wildcards (creates a .crc for each file)
@@ -158,6 +170,7 @@ Useful for verifying the integrity of files, ROMs, backups, etc.
 ### Create CRC file:
 ```
 CRC -c FILE.EXT
+CRC -c2 FILE.EXT (if CRC32 selected)
 ```
 This will create a `FILE.CRC` with the checksum of the `FILE.EXT` file.
 
@@ -185,14 +198,17 @@ OK - file correct
 
 ## CRC file format:
 
-Currently implementing CRC16, I plan adding optional CRC32
+Currently implemented CRC16 & CRC32 algorithms
 
 ## Technical notes:
 
 - Algorithm: CRC-16 with polynomial 0x8005
-- Initial value: 0xFFFF
+- Algorithm: CRC-32 with polynomial 0xEDB88320 (IEEE 802.3)
+- Initial value: 0xFFFF (CRC16) / 0xFFFFFFFF (CRC32)
 - Buffer size: 128 bytes (optimised for MSX)
+- Processing: Bit by Bit, LSB first
 - Compatible with MSX-DOS 1 and MSX-DOS 2
+
 
 ## Suitable for:
 
@@ -220,4 +236,14 @@ More projects at:
 https://x.com/Dalekamistoso
 https://github.com/Dalekamistoso
 
-Version 2.0 (2026/01/29) - First public version 
+
+## Changelog:
+
+Version 3.0 (2026/01/30) - First public version 
+ - Added support for CRC32 (use -c2 parameter)
+ - Updated readme file & screenshots
+ - New make files to compile binaries by language
+ 
+Version 2.0 (2026/01/29)
+ - First public version 
+
