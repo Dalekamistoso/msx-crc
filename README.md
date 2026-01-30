@@ -1,6 +1,6 @@
 # CRC.COM - Utilidad CRC para MSX-DOS (29/01/2026)
 
-<img width="1280" height="960" alt="crc-esp" src="https://github.com/user-attachments/assets/16a03ad5-16e4-495e-98c4-87c536e0eeda" />
+<img width="1280" height="960" alt="crc-esp" src="https://github.com/user-attachments/assets/bbbd3cea-4d95-4dfb-839e-a668e9c23f73" />
 
 _<u>(English manual & screenshot below the spanish text)</u>_
 
@@ -33,9 +33,9 @@ de CRC (Cyclic Redundancy Check).
 * Descomprime el contenido del zip del compilador junto a este .asm
   (El 'make.bat' busca el archivo "sjasm.exe" en la misma ruta de crc.asm)
 
-* Ejecuta "make.bat" adjunto para compilarlo o bien manualmente:
+* Ejecuta "make-esp.bat" adjunto para compilarlo o bien manualmente:
 
-  sjasm.exe -s crc.asm crc.com
+  sjasm.exe -s crc-esp.asm crc-esp.com
 
 
 ## Manual de uso
@@ -114,9 +114,9 @@ https://github.com/Dalekamistoso
 ## Changelog:
 
 Version 3.0 (30/01/2026)
- - Added support for CRC32 (use -c2 parameter)
- - Updated readme file & screenshots
- - New make files to compile binaries by language
+ - Agregado soporte de CRC32 (usa el parametro -c2)
+ - Actualizados archivos readme y screenshots
+ - Nuevos archivos make para compilar por lenguaje
  
 Version 2.0 (29/01/2026)
  - Primera versión pública
@@ -128,7 +128,7 @@ Version 2.0 (29/01/2026)
 
 # CRC.COM - CRC utility for MSX-DOS (29/01/2026)
 
-<img width="1280" height="960" alt="crc-eng" src="https://github.com/user-attachments/assets/7637e27f-4bd4-4f34-801e-8ee6411185bd" />
+<img width="1280" height="960" alt="crc-eng" src="https://github.com/user-attachments/assets/1be620c9-32cb-4f20-b249-98ffeaebd1e8" />
 
 ## Description
 
