@@ -97,10 +97,10 @@ Actualmente implementados CRC16 y CRC32
 - 0: Éxito (verificación correcta)
 - 1: Error (archivo corrupto, no encontrado, etc.)
 
-## Limitaciones actuales (versión 2.0):
+## Limitaciones actuales (versión 3.1):
 
 - No soporta subdirectorios (MSX-DOS1)
-- No hay soporte de CRC32
+
 
 ## Autor:
 
@@ -113,12 +113,21 @@ https://github.com/Dalekamistoso
 
 ## Changelog:
 
-Version 3.0 (30/01/2026)
+Versión 3.1 (10/03/2026)
+- Ahora se muestra el tiempo transcurrido al final de las operaciones.
+- Se ha añadido la detección de PAL/NTSC para un cálculo de tiempo preciso.
+- Se ha mejorado/corregido la función de código interno UPDATE_CRC16.
+- El tiempo se muestra con una precisión de ms (ideal para benchmarks).
+- Cálculo de CRC-16 mejorado (mejor y más rápido)
+- Comentarios de código traducidos al inglés en 'crc-eng.asm'
+- Arreglado error cosmético en el texto de ayuda de la versión española
+
+Versión 3.0 (30/01/2026)
  - Agregado soporte de CRC32 (usa el parametro -c2)
  - Actualizados archivos readme y screenshots
  - Nuevos archivos make para compilar por lenguaje
  
-Version 2.0 (29/01/2026)
+Versión 2.0 (29/01/2026)
  - Primera versión pública
 
 
@@ -222,10 +231,9 @@ Currently implemented CRC16 & CRC32 algorithms
 - 0: Success (verification correct)
 - 1: Error (file corrupt, not found, etc.)
 
-## Current limitations (version 2.0):
+## Current limitations (version 3.1):
 
 - Does not support subdirectories (MSX-DOS1)
-- No CRC32 support
 
 ## Author:
 
@@ -239,6 +247,15 @@ https://github.com/Dalekamistoso
 
 ## Changelog:
 
+Version 3.1 (2026/03/10)
+ - Time spent at the end of the operations is now displayed
+ - Added detection of PAL/NTSC for accurate time calculation
+ - Improved/fixed internal code function UPDATE_CRC16
+ - Time is displayed with miliseconds accuracy (nice for benchmarks)
+ - Improved CRC-16 calculation (now is faster and more accurate)
+ - Translated code comments to english in 'crc-eng.asm'
+ - Fixed cosmetic error in help text of the Spanish version
+ 
 Version 3.0 (2026/01/30) - First public version 
  - Added support for CRC32 (use -c2 parameter)
  - Updated readme file & screenshots

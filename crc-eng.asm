@@ -24,6 +24,9 @@ F_SETDTA    EQU     1Ah         ; Establecer Disk Transfer Area
         ORG     0100h           ; Inicio de programa .COM
 
 START:
+        ; Detect video frequency (PAL 50Hz / NTSC 60Hz) first
+        CALL    DETECT_FREQ
+
         ; Saltar espacios iniciales en DTA
         LD      HL,DTA+1
         LD      A,(DTA)         ; Longitud
@@ -81,6 +84,9 @@ CMD_CREATE_WILD:
         LD      (USE_CRC32),A
         
 CMD_CREATE_WILD_COMMON:
+        ; Start timer
+        CALL    TIMER_START
+
         ; Guardar FCB2 original como patron de busqueda
         LD      HL,FCB2
         LD      DE,SEARCHFCB
@@ -117,14 +123,18 @@ CREATE_LOOP:
         CALL    BDOS
         INC     A
         JP      NZ,CREATE_LOOP  ; Si hay mas archivos, continuar
-        
-        ; Terminar
+
+        ; Show elapsed time and exit
+        CALL    TIMER_SHOW
         RET
 
 ; ============================================
 ; Comando: Verificar archivo CRC con comodines
 ; ============================================
 CMD_VERIFY_WILD:
+        ; Start timer
+        CALL    TIMER_START
+
         ; Guardar FCB2 original como patron de busqueda
         LD      HL,FCB2
         LD      DE,SEARCHFCB
@@ -162,7 +172,8 @@ VERIFY_LOOP_WILD:
         INC     A
         JP      NZ,VERIFY_LOOP_WILD
         
-        ; Terminar
+        ; Show elapsed time and exit
+        CALL    TIMER_SHOW
         RET
 
 ; ============================================
@@ -561,6 +572,7 @@ UPDATE_LOOP16:
         XOR     E
         LD      E,A
         
+        PUSH    BC              ; Save counter BEFORE LD B,8 destroys it
         LD      B,8
 BIT_LOOP16:
         SRL     D
@@ -580,9 +592,8 @@ NO_XOR16:
         LD      (CRC_VAL),DE
         
         INC     HL
-        POP     BC
+        POP     BC              ; Restore correct counter (not saved HL)
         DEC     BC
-        PUSH    BC
         JP      UPDATE_LOOP16
 
 UPDATE_END16:
@@ -1158,7 +1169,7 @@ ERR_CREATE_SKIP:
 ; Mensajes
 ; ============================================
 MSG_HELP:
-        DB      'CRC v3.0 - CRC Checker for MSX-DOS',13,10
+        DB      'CRC v3.1 - CRC Checker for MSX-DOS',13,10
         DB      'Programmed by DrWh0/Dalekmistoso',13,10
 	DB      'Web: https://github.com/Dalekamistoso/msx-crc',13,10
         DB      13,10
@@ -1252,3 +1263,325 @@ SEARCHDTA:
 
 BUFFER:
         DS      128             ; Buffer de lectura
+
+; ============================================
+; TIMER - Measures operation elapsed time
+; Automatically detects PAL (50Hz) or NTSC
+; (60Hz) using the NT bit of VDP register R#9
+; whose RAM shadow copy is at address 0F3E8h
+; (initialised by BIOS on MSX2/2+/turboR).
+; On MSX1 machines this may not be set; the
+; default fallback is PAL (50Hz).
+; ============================================
+
+; ============================================
+; Detect video frequency: PAL=50Hz / NTSC=60Hz
+; Reads VDP R#9 shadow register at 0F3E8h
+;   bit 1 = NT:  0 -> PAL (50 Hz)
+;                1 -> NTSC (60 Hz)
+; Stores result in VDP_FREQ (50 or 60)
+; ============================================
+DETECT_FREQ:
+        LD      A,(0F3E8h)      ; VDP R#9 RAM shadow (MSX2+)
+        AND     02h             ; Isolate NT bit (bit 1)
+        LD      A,50            ; Default to PAL
+        JP      Z,DFREQ_DONE    ; NT=0 -> PAL -> 50 Hz
+        LD      A,60            ; NT=1 -> NTSC -> 60 Hz
+DFREQ_DONE:
+        LD      (VDP_FREQ),A
+        RET
+
+; Capture start time
+TIMER_START:
+        LD      HL,(0FC9Eh)     ; Read system JIFFY counter
+        LD      (TIME_BEGIN),HL
+        RET
+
+; Calculate and display elapsed time
+TIMER_SHOW:
+        ; Capture final JIFFY and compute difference
+        LD      HL,(0FC9Eh)
+        LD      DE,(TIME_BEGIN)
+        OR      A               ; Clear carry for SBC
+        SBC     HL,DE           ; HL = elapsed jiffies
+        LD      (ELAPSED_J),HL
+
+        ; Print label
+        LD      DE,MSG_TIEMPO
+        LD      C,F_STROUT
+        CALL    BDOS
+
+        ; Divide by detected frequency to get whole seconds
+        LD      HL,(ELAPSED_J)
+        CALL    DIV_BY_FREQ     ; HL = seconds, A = remainder (0..FREQ-1)
+        LD      (JIFFY_REM),A
+
+        ; Print seconds without leading zeros
+        CALL    PRINT_DEC_HL
+
+        ; Print decimal point
+        LD      E,'.'
+        LD      C,F_CONOUT
+        CALL    BDOS
+
+        ; Compute exact milliseconds: ms = remainder * 1000 / FREQ
+        ; (PAL: rem*1000/50 = rem*20 | NTSC: rem*1000/60 ~=rem*16.67)
+        ; Overflow check: max remainder is 59, 59*1000=59000 < 65535 OK
+        ; Trick: remainder * 1000 = remainder * 1024 - remainder * 24
+        LD      A,(JIFFY_REM)
+        LD      L,A
+        LD      H,0             ; HL = remainder
+        ; Compute remainder * 24  (= remainder*8 + remainder*16)
+        ADD     HL,HL           ; *2
+        ADD     HL,HL           ; *4
+        ADD     HL,HL           ; *8
+        LD      D,H
+        LD      E,L             ; DE = remainder * 8
+        ADD     HL,HL           ; *16
+        ADD     HL,DE           ; *16 + *8 = *24
+        PUSH    HL              ; save remainder*24
+
+        LD      A,(JIFFY_REM)
+        LD      L,A
+        LD      H,0             ; HL = remainder
+        ADD     HL,HL           ; *2
+        ADD     HL,HL           ; *4
+        ADD     HL,HL           ; *8
+        ADD     HL,HL           ; *16
+        ADD     HL,HL           ; *32
+        ADD     HL,HL           ; *64
+        ADD     HL,HL           ; *128
+        ADD     HL,HL           ; *256
+        ADD     HL,HL           ; *512
+        ADD     HL,HL           ; *1024
+        POP     DE              ; DE = remainder * 24
+        OR      A
+        SBC     HL,DE           ; HL = remainder * 1000
+
+        ; Divide HL by frequency to get milliseconds
+        LD      A,(VDP_FREQ)
+        LD      E,A
+        LD      D,0             ; DE = frequency (50 or 60)
+        LD      BC,0
+DIVMS_LOOP:
+        LD      A,H
+        OR      A
+        JP      NZ,DIVMS_SUB
+        LD      A,L
+        CP      E               ; Compare L with freq (D=0 here)
+        JP      C,DIVMS_DONE
+DIVMS_SUB:
+        OR      A
+        SBC     HL,DE
+        INC     BC
+        JP      DIVMS_LOOP
+DIVMS_DONE:
+        LD      H,B
+        LD      L,C             ; HL = milliseconds (0..999)
+
+        ; Print 3 digits with leading zeros
+        CALL    PRINT_3DIG
+
+        ; Print unit label and newline
+        LD      DE,MSG_SEG
+        LD      C,F_STROUT
+        CALL    BDOS
+        RET
+
+; ============================================
+; Divide HL by VDP_FREQ (50 or 60)
+; Output: HL = quotient, A = remainder
+; ============================================
+DIV_BY_FREQ:
+        PUSH    BC
+        PUSH    DE
+        LD      A,(VDP_FREQ)
+        LD      E,A
+        LD      D,0             ; DE = detected frequency
+        LD      BC,0
+DIVFREQ_LOOP:
+        LD      A,H
+        OR      A
+        JP      NZ,DIVFREQ_SUB  ; H != 0 => HL >= 256 >= 60
+        LD      A,L
+        CP      E               ; Compare L with frequency (D=0 here)
+        JP      C,DIVFREQ_DONE
+DIVFREQ_SUB:
+        OR      A               ; Clear carry
+        SBC     HL,DE
+        INC     BC
+        JP      DIVFREQ_LOOP
+DIVFREQ_DONE:
+        LD      A,L             ; A = remainder
+        LD      H,B
+        LD      L,C             ; HL = quotient (seconds)
+        POP     DE
+        POP     BC
+        RET
+
+; ============================================
+; Print HL as decimal without leading zeros
+; Minimum 1 digit. Range: 0-65535
+; ============================================
+PRINT_DEC_HL:
+        LD      A,H
+        OR      L
+        JP      NZ,PDH_NOTZERO
+        ; Special case: HL = 0
+        LD      E,'0'
+        LD      C,F_CONOUT
+        CALL    BDOS
+        RET
+PDH_NOTZERO:
+        XOR     A
+        LD      (LZ_FLAG),A     ; Enable leading zero suppression
+        LD      DE,10000
+        CALL    PDEC_DIGIT
+        LD      DE,1000
+        CALL    PDEC_DIGIT
+        LD      DE,100
+        CALL    PDEC_DIGIT
+        LD      DE,10
+        CALL    PDEC_DIGIT
+        ; Units: disable suppression to always print
+        LD      A,1
+        LD      (LZ_FLAG),A
+        LD      DE,1
+        CALL    PDEC_DIGIT
+        RET
+
+; Helper: extract and print digit for divisor DE, update HL to remainder
+PDEC_DIGIT:
+        PUSH    BC
+        LD      BC,0
+PDEC_DIG_LOOP:
+        LD      A,H
+        CP      D
+        JP      C,PDEC_DIG_LT   ; H < D => HL < DE
+        JP      NZ,PDEC_DIG_GE  ; H > D => HL >= DE
+        LD      A,L
+        CP      E
+        JP      C,PDEC_DIG_LT   ; H==D, L < E => HL < DE
+PDEC_DIG_GE:
+        OR      A               ; Clear carry
+        SBC     HL,DE
+        INC     BC
+        JP      PDEC_DIG_LOOP
+PDEC_DIG_LT:
+        ; BC = computed digit (0-9)
+        LD      A,C
+        OR      B
+        JP      NZ,PDEC_DIG_PRINT ; Non-zero digit: always print
+        LD      A,(LZ_FLAG)
+        OR      A
+        JP      Z,PDEC_DIG_END  ; Zero digit with suppression active: skip
+PDEC_DIG_PRINT:
+        LD      A,1
+        LD      (LZ_FLAG),A     ; Disable suppression
+        LD      A,C
+        ADD     A,'0'
+        PUSH    BC
+        PUSH    HL
+        LD      E,A
+        LD      C,F_CONOUT
+        CALL    BDOS
+        POP     HL
+        POP     BC
+PDEC_DIG_END:
+        POP     BC
+        RET
+
+; ============================================
+; Print HL as 3 digits with leading zeros
+; Range: 000-999  (for milliseconds)
+; ============================================
+PRINT_3DIG:
+        PUSH    BC
+        PUSH    DE
+
+        ; --- Hundreds ---
+        LD      DE,100
+        LD      BC,0
+P3DIG_CLOOP:
+        LD      A,H
+        OR      A
+        JP      NZ,P3DIG_CGE
+        LD      A,L
+        CP      100
+        JP      C,P3DIG_CLT
+P3DIG_CGE:
+        OR      A
+        SBC     HL,DE
+        INC     BC
+        JP      P3DIG_CLOOP
+P3DIG_CLT:
+        PUSH    HL
+        LD      A,C
+        ADD     A,'0'
+        LD      E,A
+        LD      C,F_CONOUT
+        CALL    BDOS
+        POP     HL
+
+        ; --- Tens ---
+        LD      DE,10
+        LD      BC,0
+P3DIG_DLOOP:
+        LD      A,H
+        OR      A
+        JP      NZ,P3DIG_DGE
+        LD      A,L
+        CP      10
+        JP      C,P3DIG_DLT
+P3DIG_DGE:
+        OR      A
+        SBC     HL,DE
+        INC     BC
+        JP      P3DIG_DLOOP
+P3DIG_DLT:
+        PUSH    HL
+        LD      A,C
+        ADD     A,'0'
+        LD      E,A
+        LD      C,F_CONOUT
+        CALL    BDOS
+        POP     HL
+
+        ; --- Units ---
+        LD      A,L
+        ADD     A,'0'
+        LD      E,A
+        LD      C,F_CONOUT
+        CALL    BDOS
+
+        POP     DE
+        POP     BC
+        RET
+
+; ============================================
+; Timer messages
+; ============================================
+MSG_TIEMPO:
+        DB      'Time: $'
+
+MSG_SEG:
+        DB      ' sec.',13,10,'$'
+
+; ============================================
+; Timer variables
+; ============================================
+VDP_FREQ:
+        DB      50              ; Detected frequency: 50 (PAL) or 60 (NTSC)
+
+TIME_BEGIN:
+        DS      2               ; JIFFY value at start of operation
+
+ELAPSED_J:
+        DS      2               ; Elapsed jiffies
+
+JIFFY_REM:
+        DS      1               ; Remainder from division by frequency
+
+LZ_FLAG:
+        DS      1               ; Flag: leading zero suppression
+
