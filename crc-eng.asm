@@ -1,35 +1,35 @@
-; CRC.ASM - Utilidad CRC para MSX-DOS con soporte de comodines
-; Ensamblar con: sjasm crc.asm crc.com
-; Creado por DrWh0/Dalekamistoso (version inglesa)
-; Modificado para soportar CRC32
+; CRC.ASM - Utility CRC para MSX-DOS with wildcard support
+; Assemble with: sjasm crc.asm crc.com
+; Created by DrWh0/Dalekamistoso (english version)
+; Modified to support CRC32
 
-; Constantes del sistema
-BDOS        EQU     0005h       ; Entrada a BDOS
-FCB1        EQU     005Ch       ; FCB del primer parametro
-FCB2        EQU     006Ch       ; FCB del segundo parametro  
+; System constants
+BDOS        EQU     0005h       ; Entry to BDOS
+FCB1        EQU     005Ch       ; FCB del first parameter
+FCB2        EQU     006Ch       ; FCB del second parameter  
 DTA         EQU     0080h       ; Disk Transfer Area
 
 ; Funciones BDOS
-F_CONOUT    EQU     02h         ; Salida de caracter a consola
-F_STROUT    EQU     09h         ; Salida de string (termina en $)
-F_OPEN      EQU     0Fh         ; Abrir archivo
-F_CLOSE     EQU     10h         ; Cerrar archivo
-F_SFIRST    EQU     11h         ; Buscar primer archivo
-F_SNEXT     EQU     12h         ; Buscar siguiente archivo
-F_READ      EQU     14h         ; Leer registro secuencial
-F_WRITE     EQU     15h         ; Escribir registro secuencial
-F_CREATE    EQU     16h         ; Crear archivo
-F_SETDTA    EQU     1Ah         ; Establecer Disk Transfer Area
+F_CONOUT    EQU     02h         ; Console character output
+F_STROUT    EQU     09h         ; String output (termina en $)
+F_OPEN      EQU     0Fh         ; Open file
+F_CLOSE     EQU     10h         ; Close file
+F_SFIRST    EQU     11h         ; Find first file
+F_SNEXT     EQU     12h         ; Find next file
+F_READ      EQU     14h         ; Read sequential record
+F_WRITE     EQU     15h         ; Write sequential record
+F_CREATE    EQU     16h         ; Create file
+F_SETDTA    EQU     1Ah         ; Set Disk Transfer Area
 
-        ORG     0100h           ; Inicio de programa .COM
+        ORG     0100h           ; Program start .COM
 
 START:
         ; Detect video frequency (PAL 50Hz / NTSC 60Hz) first
         CALL    DETECT_FREQ
 
-        ; Saltar espacios iniciales en DTA
+        ; Skip initial spaces en DTA
         LD      HL,DTA+1
-        LD      A,(DTA)         ; Longitud
+        LD      A,(DTA)         ; Length
         OR      A
         JP      Z,HELP
 
@@ -45,7 +45,7 @@ CHECK_DASH:
         JP      NZ,HELP
         INC     HL
         
-        ; Leer comando (c, c2 o v)
+        ; Read command (c, c2 o v)
         LD      A,(HL)
         CP      'c'
         JP      Z,CHECK_C2
@@ -58,28 +58,28 @@ CHECK_DASH:
         JP      HELP
 
 CHECK_C2:
-        ; Verificar si es -c2 (CRC32) o solo -c (CRC16)
+        ; Check si es -c2 (CRC32) o solo -c (CRC16)
         INC     HL
         LD      A,(HL)
         CP      '2'
         JP      Z,CMD_CREATE_CRC32
-        DEC     HL              ; Volver atras si no es '2'
+        DEC     HL              ; Go back si no es '2'
         JP      CMD_CREATE_WILD
 
 ; ============================================
-; Comando: Crear archivo CRC32 con comodines
+; Comando: Create file CRC32 con comodines
 ; ============================================
 CMD_CREATE_CRC32:
-        ; Marcar que usaremos CRC32
+        ; Mark that we will use CRC32
         LD      A,1
         LD      (USE_CRC32),A
         JP      CMD_CREATE_WILD_COMMON
 
 ; ============================================
-; Comando: Crear archivo CRC con comodines
+; Comando: Create file CRC con comodines
 ; ============================================
 CMD_CREATE_WILD:
-        ; Marcar que usaremos CRC16
+        ; Mark that we will use CRC16
         XOR     A
         LD      (USE_CRC32),A
         
@@ -87,71 +87,71 @@ CMD_CREATE_WILD_COMMON:
         ; Start timer
         CALL    TIMER_START
 
-        ; Guardar FCB2 original como patron de busqueda
+        ; Save FCB2 original como patron de busqueda
         LD      HL,FCB2
         LD      DE,SEARCHFCB
         LD      BC,37
         LDIR
         
-        ; Verificar si hay patron de busqueda
+        ; Check si hay patron de busqueda
         LD      A,(FCB2+1)
         CP      ' '
         JP      Z,HELP
         
-        ; Establecer DTA para busqueda
+        ; Set DTA para busqueda
         LD      DE,SEARCHDTA
         LD      C,F_SETDTA
         CALL    BDOS
         
-        ; Buscar primer archivo
+        ; Find first file
         LD      DE,SEARCHFCB
         LD      C,F_SFIRST
         CALL    BDOS
         INC     A
-        JP      Z,ERR_NOFILE    ; No se encontraron archivos
+        JP      Z,ERR_NOFILE    ; No files found
         
 CREATE_LOOP:
-        ; Copiar nombre encontrado de SEARCHDTA a FCB1
+        ; Copy found name de SEARCHDTA a FCB1
         CALL    COPY_FOUND_TO_FCB1
         
-        ; Procesar este archivo
+        ; Process this file
         CALL    PROCESS_CREATE
         
-        ; Buscar siguiente archivo
+        ; Find next file
         LD      DE,SEARCHFCB
         LD      C,F_SNEXT
         CALL    BDOS
         INC     A
-        JP      NZ,CREATE_LOOP  ; Si hay mas archivos, continuar
+        JP      NZ,CREATE_LOOP  ; If more files, continue
 
         ; Show elapsed time and exit
         CALL    TIMER_SHOW
         RET
 
 ; ============================================
-; Comando: Verificar archivo CRC con comodines
+; Comando: Check archivo CRC con comodines
 ; ============================================
 CMD_VERIFY_WILD:
         ; Start timer
         CALL    TIMER_START
 
-        ; Guardar FCB2 original como patron de busqueda
+        ; Save FCB2 original como patron de busqueda
         LD      HL,FCB2
         LD      DE,SEARCHFCB
         LD      BC,37
         LDIR
         
-        ; Verificar si hay patron de busqueda
+        ; Check si hay patron de busqueda
         LD      A,(FCB2+1)
         CP      ' '
         JP      Z,HELP
         
-        ; Establecer DTA para busqueda
+        ; Set DTA para busqueda
         LD      DE,SEARCHDTA
         LD      C,F_SETDTA
         CALL    BDOS
         
-        ; Buscar primer archivo
+        ; Find first file
         LD      DE,SEARCHFCB
         LD      C,F_SFIRST
         CALL    BDOS
@@ -159,13 +159,13 @@ CMD_VERIFY_WILD:
         JP      Z,ERR_NOFILE
         
 VERIFY_LOOP_WILD:
-        ; Copiar nombre encontrado de SEARCHDTA a FCB1
+        ; Copy found name de SEARCHDTA a FCB1
         CALL    COPY_FOUND_TO_FCB1
         
-        ; Procesar este archivo
+        ; Process this file
         CALL    PROCESS_VERIFY
         
-        ; Buscar siguiente archivo
+        ; Find next file
         LD      DE,SEARCHFCB
         LD      C,F_SNEXT
         CALL    BDOS
@@ -223,71 +223,71 @@ COPY_FOUND_TO_FCB1:
 ; Procesar un archivo para crear CRC
 ; ============================================
 PROCESS_CREATE:
-        ; Mostrar mensaje
+        ; Show message
         LD      DE,MSG_CALC
         LD      C,F_STROUT
         CALL    BDOS
         
-        ; Mostrar nombre del archivo
+        ; Show file name
         CALL    PRINT_FCB_NAME
         LD      DE,MSG_CRLF
         LD      C,F_STROUT
         CALL    BDOS
         
-        ; Restaurar DTA normal
+        ; Restore DTA normal
         LD      DE,DTA
         LD      C,F_SETDTA
         CALL    BDOS
         
-        ; Abrir archivo para lectura
+        ; Open file para lectura
         LD      DE,FCB1
         LD      C,F_OPEN
         CALL    BDOS
         INC     A
         JP      Z,ERR_NOFILE_SKIP
         
-        ; Inicializar registro de lectura
+        ; Initialize registro de lectura
         XOR     A
         LD      (FCB1+12),A     ; EX = 0
         LD      (FCB1+14),A     ; S1 = 0
         LD      (FCB1+15),A     ; S2 = 0
         LD      (FCB1+32),A     ; CR = 0
         
-        ; Verificar si usamos CRC32 o CRC16
+        ; Check si usamos CRC32 o CRC16
         LD      A,(USE_CRC32)
         OR      A
         JP      NZ,INIT_CRC32
         
-        ; Inicializar CRC16 a 0FFFFh
+        ; Initialize CRC16 a 0FFFFh
         LD      HL,0FFFFh
         LD      (CRC_VAL),HL
         JP      READ_LOOP_START
         
 INIT_CRC32:
-        ; Inicializar CRC32 a 0FFFFFFFFh
+        ; Initialize CRC32 a 0FFFFFFFFh
         LD      HL,0FFFFh
         LD      (CRC_VAL),HL
         LD      (CRC_VAL+2),HL
 
 READ_LOOP_START:
-        ; Establecer buffer de lectura
+        ; Set buffer de lectura
         LD      DE,BUFFER
         LD      C,F_SETDTA
         CALL    BDOS
 
 READ_LOOP:
-        ; Leer siguiente registro (128 bytes)
+        ; Read next record (128 bytes)
         LD      DE,FCB1
         LD      C,F_READ
         CALL    BDOS
         OR      A
         JP      NZ,READ_DONE
         
-        ; Calcular CRC del bloque leido
+        ; Calculate CRC of read block
         LD      HL,BUFFER
         LD      BC,128
         
-        ; Verificar si usamos CRC32 o CRC16
+        ; Check si usamos CRC32 o CRC16
         LD      A,(USE_CRC32)
         OR      A
         JP      NZ,USE_CRC32_UPDATE
@@ -300,17 +300,17 @@ USE_CRC32_UPDATE:
         JP      READ_LOOP
 
 READ_DONE:
-        ; Cerrar archivo de entrada
+        ; Close file de entrada
         LD      DE,FCB1
         LD      C,F_CLOSE
         CALL    BDOS
         
-        ; Mostrar CRC calculado
+        ; Show calculated CRC
         LD      DE,MSG_CRC
         LD      C,F_STROUT
         CALL    BDOS
         
-        ; Verificar si mostramos CRC32 o CRC16
+        ; Check si mostramos CRC32 o CRC16
         LD      A,(USE_CRC32)
         OR      A
         JP      NZ,SHOW_CRC32
@@ -330,10 +330,10 @@ SHOW_CRC_DONE:
         LD      C,F_STROUT
         CALL    BDOS
         
-        ; Crear archivo .CRC
+        ; Create file .CRC
         CALL    CREATE_CRC_FILE
         
-        ; Restaurar DTA de busqueda
+        ; Restore DTA de busqueda
         LD      DE,SEARCHDTA
         LD      C,F_SETDTA
         CALL    BDOS
@@ -341,16 +341,16 @@ SHOW_CRC_DONE:
         RET
 
 ; ============================================
-; Procesar un archivo para verificar CRC
+; Process a file to verify CRC
 ; ============================================
 PROCESS_VERIFY:
-        ; Guardar FCB1 en SAVEFCB
+        ; Save FCB1 en SAVEFCB
         LD      HL,FCB1
         LD      DE,SAVEFCB
         LD      BC,37
         LDIR
         
-        ; Mostrar mensaje
+        ; Show message
         LD      DE,MSG_VERIFY
         LD      C,F_STROUT
         CALL    BDOS
@@ -360,7 +360,7 @@ PROCESS_VERIFY:
         LD      C,F_STROUT
         CALL    BDOS
         
-        ; Restaurar DTA normal
+        ; Restore DTA normal
         LD      DE,DTA
         LD      C,F_SETDTA
         CALL    BDOS
@@ -369,7 +369,7 @@ PROCESS_VERIFY:
         CALL    READ_CRC_FILE
         JP      C,ERR_NOCRC_SKIP
         
-        ; Guardar CRC leido y detectar tipo
+        ; Save CRC leido y detectar tipo
         LD      A,(CRC_FILE_TYPE)
         LD      (USE_CRC32),A
         
@@ -378,7 +378,7 @@ PROCESS_VERIFY:
         LD      HL,(CRC_FROM_FILE+2)
         LD      (SAVED_CRC+2),HL
         
-        ; Restaurar FCB1 original
+        ; Restore FCB1 original
         LD      HL,SAVEFCB
         LD      DE,FCB1
         LD      BC,37
@@ -398,29 +398,29 @@ PROCESS_VERIFY:
         INC     A
         JP      Z,ERR_NOFILE_SKIP
         
-        ; Inicializar registro
+        ; Initialize registro
         XOR     A
         LD      (FCB1+12),A
         LD      (FCB1+32),A
         
-        ; Verificar si usamos CRC32 o CRC16
+        ; Check si usamos CRC32 o CRC16
         LD      A,(USE_CRC32)
         OR      A
         JP      NZ,VERIFY_INIT_CRC32
         
-        ; Inicializar CRC16
+        ; Initialize CRC16
         LD      HL,0FFFFh
         LD      (CRC_VAL),HL
         JP      VERIFY_READ_START
         
 VERIFY_INIT_CRC32:
-        ; Inicializar CRC32
+        ; Initialize CRC32
         LD      HL,0FFFFh
         LD      (CRC_VAL),HL
         LD      (CRC_VAL+2),HL
 
 VERIFY_READ_START:
-        ; Establecer buffer
+        ; Set buffer
         LD      DE,BUFFER
         LD      C,F_SETDTA
         CALL    BDOS
@@ -435,7 +435,7 @@ VERIFY_READ_LOOP:
         LD      HL,BUFFER
         LD      BC,128
         
-        ; Verificar si usamos CRC32 o CRC16
+        ; Check si usamos CRC32 o CRC16
         LD      A,(USE_CRC32)
         OR      A
         JP      NZ,VERIFY_USE_CRC32
@@ -448,17 +448,17 @@ VERIFY_USE_CRC32:
         JP      VERIFY_READ_LOOP
 
 VERIFY_DONE:
-        ; Cerrar archivo
+        ; Close file
         LD      DE,FCB1
         LD      C,F_CLOSE
         CALL    BDOS
         
-        ; Mostrar CRC calculado
+        ; Show calculated CRC
         LD      DE,MSG_CALC2
         LD      C,F_STROUT
         CALL    BDOS
         
-        ; Verificar si mostramos CRC32 o CRC16
+        ; Check si mostramos CRC32 o CRC16
         LD      A,(USE_CRC32)
         OR      A
         JP      NZ,VERIFY_SHOW_CRC32
@@ -478,12 +478,12 @@ VERIFY_SHOW_DONE:
         LD      C,F_STROUT
         CALL    BDOS
         
-        ; Mostrar CRC guardado
+        ; Show saved CRC
         LD      DE,MSG_SAVED
         LD      C,F_STROUT
         CALL    BDOS
         
-        ; Verificar si mostramos CRC32 o CRC16
+        ; Check si mostramos CRC32 o CRC16
         LD      A,(USE_CRC32)
         OR      A
         JP      NZ,VERIFY_SHOW_SAVED_CRC32
@@ -503,7 +503,7 @@ VERIFY_COMPARE:
         LD      C,F_STROUT
         CALL    BDOS
         
-        ; Comparar CRCs
+        ; Compare CRCs
         LD      A,(USE_CRC32)
         OR      A
         JP      NZ,COMPARE_CRC32
@@ -536,7 +536,7 @@ VERIFY_OK:
         LD      C,F_STROUT
         CALL    BDOS
         
-        ; Restaurar DTA de busqueda
+        ; Restore DTA de busqueda
         LD      DE,SEARCHDTA
         LD      C,F_SETDTA
         CALL    BDOS
@@ -547,14 +547,14 @@ VERIFY_BAD:
         LD      C,F_STROUT
         CALL    BDOS
         
-        ; Restaurar DTA de busqueda
+        ; Restore DTA de busqueda
         LD      DE,SEARCHDTA
         LD      C,F_SETDTA
         CALL    BDOS
         RET
 
 ; ============================================
-; Calcular CRC16
+; Calculate CRC16
 ; Entrada: HL = buffer, BC = longitud
 ; ============================================
 UPDATE_CRC16:
@@ -603,7 +603,7 @@ UPDATE_END16:
         RET
 
 ; ============================================
-; Calcular CRC32
+; Calculate CRC32
 ; Entrada: HL = buffer, BC = longitud
 ; Usa el polinomio IEEE 802.3: 0xEDB88320
 ; ============================================
@@ -631,14 +631,14 @@ UPDATE_LOOP32:
         POP     IX
         POP     HL
         
-        ; Guardar contador de bytes
+        ; Save contador de bytes
         PUSH    BC
         
         ; Procesar 8 bits
         LD      B,8
         
 BIT_LOOP32:
-        ; Verificar bit menos significativo de E
+        ; Check bit menos significativo de E
         BIT     0,E
         JP      Z,NO_CARRY32
         
@@ -692,13 +692,13 @@ NO_CARRY32:
 SHIFT_DONE32:
         DJNZ    BIT_LOOP32
         
-        ; Guardar resultado
+        ; Save resultado
         LD      (CRC_VAL),DE
         PUSH    IX
         POP     DE
         LD      (CRC_VAL+2),DE
         
-        ; Restaurar contador de bytes
+        ; Restore contador de bytes
         POP     BC
         
         INC     HL
@@ -715,7 +715,7 @@ UPDATE_END32:
         RET
 
 ; ============================================
-; Imprimir nombre de archivo desde FCB1
+; Print file name desde FCB1
 ; ============================================
 PRINT_FCB_NAME:
         PUSH    BC
@@ -771,7 +771,7 @@ PRINT_DONE:
         RET
 
 ; ============================================
-; Imprimir numero hexadecimal de 16 bits
+; Print hexadecimal number de 16 bits
 ; Entrada: HL = numero
 ; ============================================
 PRINT_HEX16:
@@ -807,7 +807,7 @@ PRINT_CHAR:
         RET
 
 ; ============================================
-; Crear archivo .CRC
+; Create file .CRC
 ; ============================================
 CREATE_CRC_FILE:
         ; Copiar FCB1 a CRCFCB
@@ -829,7 +829,7 @@ CREATE_CRC_FILE:
         LD      (CRCFCB+15),A
         LD      (CRCFCB+32),A
         
-        ; Crear archivo
+        ; Create file
         LD      DE,CRCFCB
         LD      C,F_CREATE
         CALL    BDOS
@@ -922,7 +922,7 @@ FILL_EOF:
         LD      C,F_WRITE
         CALL    BDOS
         
-        ; Cerrar archivo
+        ; Close file
         LD      DE,CRCFCB
         LD      C,F_CLOSE
         CALL    BDOS
@@ -935,7 +935,7 @@ FILL_EOF:
         RET
 
 ; ============================================
-; Convertir HEX (HL) a texto en (DE)
+; Convert HEX (HL) a texto en (DE)
 ; ============================================
 HEX_TO_TEXT:
         LD      A,H
@@ -967,7 +967,7 @@ STORE_CHAR:
         RET
 
 ; ============================================
-; Leer CRC del archivo .CRC
+; Read CRC from file .CRC
 ; Salida: CRC_FROM_FILE, CRC_FILE_TYPE, Carry = error
 ; ============================================
 READ_CRC_FILE:
@@ -990,14 +990,14 @@ READ_CRC_FILE:
         LD      (CRCFCB+15),A   ; S2 = 0
         LD      (CRCFCB+32),A   ; CR = 0
         
-        ; Abrir archivo .CRC
+        ; Open file .CRC
         LD      DE,CRCFCB
         LD      C,F_OPEN
         CALL    BDOS
         INC     A
         JP      Z,CRC_ERR
         
-        ; Inicializar registro
+        ; Initialize registro
         XOR     A
         LD      (CRCFCB+32),A
         
@@ -1012,7 +1012,7 @@ READ_CRC_FILE:
         OR      A
         JP      NZ,CRC_ERR
         
-        ; Cerrar archivo
+        ; Close file
         LD      DE,CRCFCB
         LD      C,F_CLOSE
         CALL    BDOS
@@ -1055,7 +1055,7 @@ CRC_ERR:
         RET
 
 ; ============================================
-; Convertir 4 caracteres HEX a numero (CRC16)
+; Convert 4 HEX characters to number (CRC16)
 ; Entrada: HL = puntero al texto
 ; Salida: CRC_FROM_FILE (16 bits)
 ; ============================================
@@ -1094,12 +1094,12 @@ IS_DIGIT16:
         INC     HL
         DJNZ    PARSE_HEX16
         
-        ; Guardar resultado
+        ; Save resultado
         LD      (CRC_FROM_FILE),DE
         RET
 
 ; ============================================
-; Convertir 8 caracteres HEX a numero (CRC32)
+; Convert 8 HEX characters to number (CRC32)
 ; Entrada: HL = puntero al texto
 ; Salida: CRC_FROM_FILE (32 bits)
 ; ============================================
@@ -1122,7 +1122,7 @@ TEXT_TO_HEX32:
         RET
 
 ; ============================================
-; Mostrar ayuda
+; Show help
 ; ============================================
 HELP:
         LD      DE,MSG_HELP
@@ -1131,7 +1131,7 @@ HELP:
         RET
 
 ; ============================================
-; Errores
+; Errors
 ; ============================================
 ERR_NOFILE:
         LD      DE,MSG_ERRFILE
@@ -1143,7 +1143,7 @@ ERR_NOFILE_SKIP:
         LD      DE,MSG_ERRFILE_SKIP
         LD      C,F_STROUT
         CALL    BDOS
-        ; Restaurar DTA de busqueda antes de continuar
+        ; Restore DTA de busqueda antes de continuar
         LD      DE,SEARCHDTA
         LD      C,F_SETDTA
         CALL    BDOS
@@ -1153,7 +1153,7 @@ ERR_NOCRC_SKIP:
         LD      DE,MSG_ERRCRC_SKIP
         LD      C,F_STROUT
         CALL    BDOS
-        ; Restaurar DTA de busqueda antes de continuar
+        ; Restore DTA de busqueda antes de continuar
         LD      DE,SEARCHDTA
         LD      C,F_SETDTA
         CALL    BDOS
@@ -1166,7 +1166,7 @@ ERR_CREATE_SKIP:
         RET
 
 ; ============================================
-; Mensajes
+; Messages
 ; ============================================
 MSG_HELP:
         DB      'CRC v3.1 - CRC Checker for MSX-DOS',13,10
@@ -1584,4 +1584,3 @@ JIFFY_REM:
 
 LZ_FLAG:
         DS      1               ; Flag: leading zero suppression
-
